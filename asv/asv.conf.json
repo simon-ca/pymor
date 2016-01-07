@@ -45,7 +45,8 @@
     "matrix": {
 	"Cython": [],
         "numpy": [],
-	"scipy": []
+	"scipy": [],
+	"matplotlib": [],  // for running demos
     },
 
     // The directory (relative to the current directory) that benchmarks are
