@@ -3,17 +3,17 @@
 
 
 class TimeNumpyVectorArrray:
-    """
-    An example benchmark that times the performance of various kinds
-    of iterating over dictionaries in Python.
-    """
-    def setup(self):
+
+    params = [(10, 100), (10, 10000, 1000000)]
+    param_names = ['len', 'dim']
+
+    def setup(self, len_, dim):
         import numpy as np
         from pymor.vectorarrays.numpy import NumpyVectorArray
-        self.U = NumpyVectorArray(np.random.random((100, 100000)))
+        self.U = NumpyVectorArray(np.random.random((len_, dim)))
 
-    def time_copy(self):
+    def time_copy(self, len_, dim):
         self.U.copy()
 
-    def time_gramian(self):
+    def time_gramian(self, len_, dim):
         self.U.gramian()
