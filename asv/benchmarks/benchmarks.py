@@ -32,6 +32,15 @@ class TimeNumpyVectorArrray:
             U_ind[i] = v
         self.U_ind = U_ind
         self.V_ind = np.random.randint(0, len(self.V), len(self.V) // 4)
+        self.coeffs = np.random.random(len(self.U))
+        self.coeffs_ind = self.coeffs[self.U_ind]
+        self.components = np.random.randint(0, self.U.dim, 7)
+
+    def time_empty(self, len_, dim):
+        self.U.empty(len_)
+
+    def time_zeros(self, len_, dim):
+        self.U.zeros(len_)
 
     def time_copy(self, len_, dim):
         self.U.copy()
@@ -44,6 +53,18 @@ class TimeNumpyVectorArrray:
 
     def time_gramian_indexed(self, len_, dim):
         self.U.gramian(ind=self.U_ind)
+
+    def time_dot(self, len_, dim):
+        self.U.dot(self.V)
+
+    def time_dot_indexed(self, len_, dim):
+        self.U.dot(self.V, ind=self.U_ind, o_ind=self.V_ind)
+
+    def time_pairwise_dot(self, len_, dim):
+        self.U.pairwise_dot(self.V)
+
+    def time_pairwise_dot_indexed(self, len_, dim):
+        self.U.pairwise_dot(self.V, ind=self.U_ind, o_ind=self.V_ind)
 
     def time_scal(self, len_, dim):
         self.U.scal(42.)
@@ -60,6 +81,42 @@ class TimeNumpyVectorArrray:
     def time_axpy_indexed(self, len_, dim):
         self.U.axpy(42., self.V, ind=self.U_ind, x_ind=self.V_ind)
         self.U.axpy(-42., self.V, ind=self.U_ind, x_ind=self.V_ind)
+
+    def time_lincomb(self, len_, dim):
+        self.U.lincomb(self.coeffs)
+
+    def time_lincomb_indexed(self, len_, dim):
+        self.U.lincomb(self.coeffs_ind, ind=self.U_ind)
+
+    def time_l2_norm(self, len_, dim):
+        self.U.l2_norm()
+
+    def time_l2_norm_indexed(self, len_, dim):
+        self.U.l2_norm(ind=self.U_ind)
+
+    def time_l1_norm(self, len_, dim):
+        self.U.l1_norm()
+
+    def time_l1_norm_indexed(self, len_, dim):
+        self.U.l1_norm(ind=self.U_ind)
+
+    def time_sup_norm(self, len_, dim):
+        self.U.sup_norm()
+
+    def time_sup_norm_indexed(self, len_, dim):
+        self.U.sup_norm(ind=self.U_ind)
+
+    def time_amax(self, len_, dim):
+        self.U.amax()
+
+    def time_amax_indexed(self, len_, dim):
+        self.U.amax(ind=self.U_ind)
+
+    def time_components(self, len_, dim):
+        self.U.components(self.components)
+
+    def time_components_indexed(self, len_, dim):
+        self.U.components(self.components, ind=self.U_ind)
 
 
 class TimeDemos:
