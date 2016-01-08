@@ -3,7 +3,10 @@
 
 from __future__ import division
 
+import os
 import timeit
+
+os.environ['OMP_NUM_THREADS'] = '1'  # ensure we are running single threaded
 
 
 class TimeNumpyVectorArrray:
