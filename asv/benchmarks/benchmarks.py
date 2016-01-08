@@ -152,3 +152,22 @@ class TimeDemos:
 
     def time_thermalblock_manymu(self):
         self._run('pymordemos.thermalblock', [2, 2, 16, 10, '--test=1'])
+
+    def time_thermalblock_small_listva(self):
+        self._run('pymordemos.thermalblock', [2, 2, 2, 10, '--list-vector-array'])
+
+    def time_thermalblock_highdim_listva(self):
+        self._run('pymordemos.thermalblock', [2, 2, 2, 10, '--grid=300', '--list-vector-array'])
+
+    def time_thermalblock_manymu_listva(self):
+        self._run('pymordemos.thermalblock', [2, 2, 16, 10, '--test=1', '--list-vector-array'])
+
+    def time_burgersei_small(self):
+        self._run('pymordemos.burgers_ei', [1, 2, 3, 40, 3, 10, '--test=0', '--cache-region=disk'])
+
+    def time_burgersei_highdim(self):
+        self._run('pymordemos.burgers_ei', [1, 2, 3, 40, 3, 10, '--test=0', '--cache-region=disk',
+                                            '--grid=120', '--nt=200'])
+
+    def time_burgersei_largecb(self):
+        self._run('pymordemos.burgers_ei', [1, 2, 10, 700, 3, 10, '--test=0', '--cache-region=disk'])
