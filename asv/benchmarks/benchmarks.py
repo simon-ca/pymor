@@ -9,18 +9,28 @@ import timeit
 os.environ['OMP_NUM_THREADS'] = '1'  # ensure we are running single threaded
 
 
-class TimeNumpyVectorArrray:
+class TimeVectorArray:
 
-    params = [(10, 100), (10, 10000, 1000000)]
-    param_names = ['len', 'dim']
+    params = [('numpy', 'numpylist'), (10, 100), (10, 10000, 1000000)]
+    param_names = ['type', 'len', 'dim']
 
-    def setup(self, len_, dim):
+    def setup(self, type_, len_, dim):
         import numpy as np
-        from pymor.vectorarrays.numpy import NumpyVectorArray
         np.random.seed(42)
-        self.U = NumpyVectorArray(np.random.random((len_, dim)))
-        self.W = self.U.copy()
-        self.V = NumpyVectorArray(np.random.random((len_, dim)))
+
+        U = np.random.random((len_, dim))
+        V = np.random.random((len_, dim))
+        if type_ == 'numpy':
+            from pymor.vectorarrays.numpy import NumpyVectorArray
+            self.U = NumpyVectorArray(U, copy=False)
+            self.V = NumpyVectorArray(V, copy=False)
+        elif type_ == 'numpylist':
+            from pymor.vectorarrays.list import ListVectorArray, NumpyVector
+            self.U = ListVectorArray([NumpyVector(u) for u in U], copy=False)
+            self.V = ListVectorArray([NumpyVector(v) for v in V], copy=False)
+        else:
+            assert False
+
         U_ind = np.random.randint(0, len(self.U), len(self.U) // 4)
         seen = set()
         for i, v in enumerate(U_ind):
@@ -36,86 +46,86 @@ class TimeNumpyVectorArrray:
         self.coeffs_ind = self.coeffs[self.U_ind]
         self.components = np.random.randint(0, self.U.dim, 7)
 
-    def time_empty(self, len_, dim):
+    def time_empty(self, type_, len_, dim):
         self.U.empty(len_)
 
-    def time_zeros(self, len_, dim):
+    def time_zeros(self, type_, len_, dim):
         self.U.zeros(len_)
 
-    def time_copy(self, len_, dim):
+    def time_copy(self, type_, len_, dim):
         self.U.copy()
 
-    def time_copy_indexed(self, len_, dim):
+    def time_copy_indexed(self, type_, len_, dim):
         self.U.copy(ind=self.U_ind)
 
-    def time_gramian(self, len_, dim):
+    def time_gramian(self, type_, len_, dim):
         self.U.gramian()
 
-    def time_gramian_indexed(self, len_, dim):
+    def time_gramian_indexed(self, type_, len_, dim):
         self.U.gramian(ind=self.U_ind)
 
-    def time_dot(self, len_, dim):
+    def time_dot(self, type_, len_, dim):
         self.U.dot(self.V)
 
-    def time_dot_indexed(self, len_, dim):
+    def time_dot_indexed(self, type_, len_, dim):
         self.U.dot(self.V, ind=self.U_ind, o_ind=self.V_ind)
 
-    def time_pairwise_dot(self, len_, dim):
+    def time_pairwise_dot(self, type_, len_, dim):
         self.U.pairwise_dot(self.V)
 
-    def time_pairwise_dot_indexed(self, len_, dim):
+    def time_pairwise_dot_indexed(self, type_, len_, dim):
         self.U.pairwise_dot(self.V, ind=self.U_ind, o_ind=self.V_ind)
 
-    def time_scal(self, len_, dim):
+    def time_scal(self, type_, len_, dim):
         self.U.scal(42.)
         self.U.scal(1/42.)  # important! setup is not called in the inner loop of timeit
 
-    def time_scal_indexed(self, len_, dim):
+    def time_scal_indexed(self, type_, len_, dim):
         self.U.scal(42., ind=self.U_ind)
         self.U.scal(1/42., ind=self.U_ind)
 
-    def time_axpy(self, len_, dim):
+    def time_axpy(self, type_, len_, dim):
         self.U.axpy(42., self.V)
         self.U.axpy(-42., self.V)
 
-    def time_axpy_indexed(self, len_, dim):
+    def time_axpy_indexed(self, type_, len_, dim):
         self.U.axpy(42., self.V, ind=self.U_ind, x_ind=self.V_ind)
         self.U.axpy(-42., self.V, ind=self.U_ind, x_ind=self.V_ind)
 
-    def time_lincomb(self, len_, dim):
+    def time_lincomb(self, type_, len_, dim):
         self.U.lincomb(self.coeffs)
 
-    def time_lincomb_indexed(self, len_, dim):
+    def time_lincomb_indexed(self, type_, len_, dim):
         self.U.lincomb(self.coeffs_ind, ind=self.U_ind)
 
-    def time_l2_norm(self, len_, dim):
+    def time_l2_norm(self, type_, len_, dim):
         self.U.l2_norm()
 
-    def time_l2_norm_indexed(self, len_, dim):
+    def time_l2_norm_indexed(self, type_, len_, dim):
         self.U.l2_norm(ind=self.U_ind)
 
-    def time_l1_norm(self, len_, dim):
+    def time_l1_norm(self, type_, len_, dim):
         self.U.l1_norm()
 
-    def time_l1_norm_indexed(self, len_, dim):
+    def time_l1_norm_indexed(self, type_, len_, dim):
         self.U.l1_norm(ind=self.U_ind)
 
-    def time_sup_norm(self, len_, dim):
+    def time_sup_norm(self, type_, len_, dim):
         self.U.sup_norm()
 
-    def time_sup_norm_indexed(self, len_, dim):
+    def time_sup_norm_indexed(self, type_, len_, dim):
         self.U.sup_norm(ind=self.U_ind)
 
-    def time_amax(self, len_, dim):
+    def time_amax(self, type_, len_, dim):
         self.U.amax()
 
-    def time_amax_indexed(self, len_, dim):
+    def time_amax_indexed(self, type_, len_, dim):
         self.U.amax(ind=self.U_ind)
 
-    def time_components(self, len_, dim):
+    def time_components(self, type_, len_, dim):
         self.U.components(self.components)
 
-    def time_components_indexed(self, len_, dim):
+    def time_components_indexed(self, type_, len_, dim):
         self.U.components(self.components, ind=self.U_ind)
 
 
