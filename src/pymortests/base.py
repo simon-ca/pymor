@@ -107,6 +107,20 @@ class MonomOperator(OperatorBase):
         return NumpyVectorArray(1. / V.data)
 
 
+def get_testdata_dir(filename_hint):
+    current_dir=os.path.dirname(os.path.abspath(filename_hint))
+    while os.path.basename(current_dir) != 'pymortests':
+        # walk one dir up in the tree
+        current_dir = os.path.split(current_dir)[0]
+        if current_dir == '':
+            raise IOError('testdata directory not found')
+    # in-source case
+    if 'src' in current_dir:
+        return os.path.join(current_dir, '..', '..', 'testdata')
+    # site-packages dir case
+    return os.path.join(current_dir, '..', 'testdata')
+
+
 def check_results(test_name, params, results, *args):
     tols = (1e-13, 1e-13)
     keys = {}
@@ -123,8 +137,7 @@ def check_results(test_name, params, results, *args):
     results = {k: np.asarray(results[k]) for k in keys.keys()}
     assert all(v.dtype != object for v in results.values())
 
-    basepath = os.path.join(os.path.dirname(__file__),
-                            '..', '..', 'testdata', 'check_results')
+    basepath = os.path.join(get_testdata_dir(__file__), 'check_results')
     arg_id = hashlib.sha1(str(params)).hexdigest()
     filename = os.path.normpath(os.path.join(basepath, test_name, arg_id))
 

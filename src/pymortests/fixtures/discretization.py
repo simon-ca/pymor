@@ -15,6 +15,7 @@ from pymor.discretizers.disk import discretize_stationary_from_disk, discretize_
 from pymor.discretizers.elliptic import discretize_elliptic_cg
 from pymortests.fixtures.analyticalproblem import (picklable_thermalblock_problems, non_picklable_thermalblock_problems,
                                                    burgers_problems)
+from pymortests.base import get_testdata_dir
 
 
 picklable_discretizaion_generators = \
@@ -23,9 +24,9 @@ picklable_discretizaion_generators = \
         [lambda p=p,d=d: discretize_nonlinear_instationary_advection_fv(p, diameter=d)[0]
          for p, d in product(burgers_problems, [1./10., 1./15.])] + \
         [lambda p=p: discretize_stationary_from_disk(parameter_file=p)
-         for p in (os.path.join(os.path.dirname(__file__), '../../../testdata/parameter_stationary.ini'),)] + \
+         for p in (os.path.join(get_testdata_dir(__file__), 'parameter_stationary.ini'),)] + \
         [lambda p=p: discretize_instationary_from_disk(parameter_file=p)
-         for p in (os.path.join(os.path.dirname(__file__), '../../../testdata/parameter_instationary.ini'),)]
+         for p in (os.path.join(get_testdata_dir(__file__), 'parameter_instationary.ini'),)] 
 
 
 non_picklable_discretization_generators = \

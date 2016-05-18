@@ -171,6 +171,23 @@ def _missing(names):
                 yield name
 
 
+def _list_data_files():
+    def list_subdir(base, name):
+        if base is not None:
+            install_target = os.path.join(base, name)
+        else:
+            install_target = name
+        results = []
+        for dirpath, dirnames, filenames in os.walk(name):
+            if len(filenames) > 0:
+                results.append((dirpath.replace(base,''), [os.path.join(dirpath,f) for f in filenames]))
+        return results
+    from pprint import pprint
+    base = os.path.dirname(os.path.abspath(__file__))
+    files = list_subdir(base, 'testdata')
+    pprint(files)
+    return files
+
 def setup_package():
     revstring = write_version()
 
@@ -199,6 +216,7 @@ def setup_package():
                      'Topic :: Scientific/Engineering :: Visualization'],
         license='LICENSE.txt',
         zip_safe=False,
+        data_files=_list_data_files()
     )
 
     missing = list(_missing(install_suggests.keys()))
