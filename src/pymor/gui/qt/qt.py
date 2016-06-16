@@ -9,7 +9,6 @@ for the `Qt <http://www.qt-project.org>`_ widget toolkit for the GUI.
 
 from __future__ import absolute_import, division, print_function
 
-import math as m
 import numpy as np
 
 try:
@@ -31,7 +30,7 @@ from pymor.grids.oned import OnedGrid
 from pymor.grids.referenceelements import triangle, square
 from pymor.gui.qt.widgets.gl import GLPatchWidget, ColorBarWidget, HAVE_GL, HAVE_QTOPENGL
 from pymor.gui.qt.widgets.matplotlib import Matplotlib1DWidget, MatplotlibPatchWidget, HAVE_MATPLOTLIB
-from pymor.gui.qt.windows.main import PlotMainWindow
+from pymor.gui.qt.windows import PlotMainWindow
 from pymor.tools.vtkio import HAVE_PYVTK, write_vtk
 from pymor.vectorarrays.interfaces import VectorArrayInterface
 from pymor.vectorarrays.numpy import NumpyVectorArray
