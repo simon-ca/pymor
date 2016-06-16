@@ -2,18 +2,21 @@
 # Copyright 2013-2016 pyMOR developers and contributors. All rights reserved.
 # License: BSD 2-Clause License (http://opensource.org/licenses/BSD-2-Clause)
 
+from __future__ import absolute_import, division, print_function
+
+
 from pymor.analyticalproblems.elliptic import EllipticProblem
 from pymor.discretizations.basic import StationaryDiscretization
 from pymor.domaindiscretizers.default import discretize_domain_default
 from pymor.grids.boundaryinfos import EmptyBoundaryInfo
 from pymor.grids.referenceelements import line, triangle, square
-from pymor.gui.qt import PatchVisualizer, Matplotlib1DVisualizer
+from pymor.gui.visualizers import PatchVisualizer, Matplotlib1DVisualizer
 from pymor.operators import cg, fv
 from pymor.operators.constructions import LincombOperator
 
 
 def discretize_elliptic_cg(analytical_problem, diameter=None, domain_discretizer=None,
-                           grid=None, boundary_info=None):
+                           grid=None, boundary_info=None, frontend=None):
     """Discretizes an |EllipticProblem| using finite elements.
 
     Parameters
@@ -158,9 +161,9 @@ def discretize_elliptic_cg(analytical_problem, diameter=None, domain_discretizer
     F = Functional(grid, p.rhs, boundary_info, dirichlet_data=p.dirichlet_data, neumann_data=p.neumann_data)
 
     if grid.reference_element in (triangle, square):
-        visualizer = PatchVisualizer(grid=grid, bounding_box=grid.bounding_box(), codim=2)
+        visualizer = PatchVisualizer(grid=grid, bounding_box=grid.bounding_box(), codim=2, frontend=frontend)
     elif grid.reference_element is line:
-        visualizer = Matplotlib1DVisualizer(grid=grid, codim=1)
+        visualizer = Matplotlib1DVisualizer(grid=grid, codim=1, frontend=frontend)
     else:
         visualizer = None
 
@@ -186,7 +189,7 @@ def discretize_elliptic_cg(analytical_problem, diameter=None, domain_discretizer
 
 
 def discretize_elliptic_fv(analytical_problem, diameter=None, domain_discretizer=None,
-                           grid=None, boundary_info=None):
+                           grid=None, boundary_info=None, frontend=None):
     """Discretizes an |EllipticProblem| using the finite volume method.
 
     Parameters
@@ -264,9 +267,9 @@ def discretize_elliptic_fv(analytical_problem, diameter=None, domain_discretizer
                                    diffusion_function=p.diffusion_functions[0], neumann_data=p.neumann_data)
 
     if grid.reference_element in (triangle, square):
-        visualizer = PatchVisualizer(grid=grid, bounding_box=grid.bounding_box(), codim=0)
+        visualizer = PatchVisualizer(grid=grid, bounding_box=grid.bounding_box(), codim=0, frontend=frontend)
     elif grid.reference_element is line:
-        visualizer = Matplotlib1DVisualizer(grid=grid, codim=0)
+        visualizer = Matplotlib1DVisualizer(grid=grid, codim=0, frontend=frontend)
     else:
         visualizer = None
 
@@ -279,3 +282,4 @@ def discretize_elliptic_fv(analytical_problem, diameter=None, domain_discretizer
                                               parameter_space=parameter_space, name='{}_FV'.format(p.name))
 
     return discretization, {'grid': grid, 'boundary_info': boundary_info}
+
