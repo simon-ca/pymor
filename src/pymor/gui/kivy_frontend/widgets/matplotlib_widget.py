@@ -21,29 +21,7 @@ import numpy as np
 from matplotlib.figure import Figure
 
 if HAVE_ALL:
-    """
-    def getMatplotlibSineWidget(max_x=3.0, dpi=100):
-        from pymor.playground.kivy_matplotlib import FigureCanvasKivyAgg
 
-        class MatplotlibOnedWidget(FigureCanvasKivyAgg):
-
-            def __init__(self, max_x=3.0, dpi=100):
-                self.blitbox = None
-                figure = Figure(dpi=dpi)
-                self.axes = figure.gca()
-                self.axes.hold(True)
-
-                self.compute_initial_figure(max_x)
-
-                super(FigureCanvasKivyAgg, self).__init__(figure=figure)
-
-            def compute_initial_figure(self, max_x):
-                t = np.arange(0.0, max_x, 0.01)
-                s = np.sin(2*np.pi*t)
-                self.axes.plot(t, s)
-
-        return MatplotlibOnedWidget(max_x=max_x, dpi=dpi)
-    """
     def getMatplotlibOnedWidget(parent, grid, count, vmin=None, vmax=None, legend=None, codim=1,
                      separate_plots=False, dpi=100):
         from pymor.gui.kivy_matplotlib import FigureCanvasKivyAgg
