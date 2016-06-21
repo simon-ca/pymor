@@ -4,32 +4,6 @@ from pymor.grids.referenceelements import triangle, square
 import time
 import math
 
-
-VS_NEW = """
-#ifdef GL_ES
-    precision highp float;
-#endif
-
-attribute vec2  v_pos;
-attribute float  v_color;
-
-uniform mat4 modelview_mat;
-uniform mat4 projection_mat;
-uniform vec2 shift;
-uniform vec2 scale;
-
-varying vec4 frag_color;
-varying vec2 tex_coord0;
-
-void main (void) {
-    vec2 pos_moved = v_pos * scale + shift;
-
-    gl_Position = projection_mat * modelview_mat * vec4(pos_moved, 1.0, 1.0);
-    frag_color = vec4(v_color, 0.0, 0.0, 0.0);
-    tex_coord0 = vec2(0.0, 0.0);
-}
-"""
-
 VS = """
 #ifdef GL_ES
     precision highp float;
@@ -318,7 +292,6 @@ if HAVE_ALL:
                 self.rect.pos = value
 
             def on_size(self, instance, value):
-                #self.fbo.size = value
                 self.rect.texture = self.fbo.texture
                 self.rect.size = value
 
@@ -342,8 +315,7 @@ if HAVE_ALL:
         from kivy.uix.label import Label
         from kivy.graphics.vertex_instructions import Mesh
         from kivy.graphics.transformation import Matrix
-        from kivy.graphics import Fbo
-        from kivy.graphics import Rectangle
+        from kivy.graphics import Fbo, Rectangle
 
         class ColorBarFBO(Widget):
 
@@ -408,10 +380,14 @@ if HAVE_ALL:
 
         class ColorBarWidget(BoxLayout):
 
+            WIDTH = 80
+            LABEL_HEIGHT = 40
+            LABEL_COLOR = (0, 0, 0, 1)  # RGBA format
+
             def __init__(self, padding, U=None, vmin=None, vmax=None):
-                super(ColorBarWidget, self).__init__(padding=padding, size_hint_x=None, width=80)
-                self.label_min = Label(color=(0, 0, 0, 1), size_hint_y=None, height=40)
-                self.label_max = Label(color=(0, 0, 0, 1), size_hint_y=None, height=40)
+                super(ColorBarWidget, self).__init__(padding=padding, size_hint_x=None, width=self.WIDTH)
+                self.label_min = Label(color=self.LABEL_COLOR, size_hint_y=None, height=self.LABEL_HEIGHT)
+                self.label_max = Label(color=self.LABEL_COLOR, size_hint_y=None, height=self.LABEL_HEIGHT)
                 self.colorbar = ColorBarFBO()
 
                 super(ColorBarWidget, self).__init__(orientation='vertical')
