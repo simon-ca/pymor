@@ -102,7 +102,7 @@ class PatchVisualizer(BasicInterface):
         self.block = block
 
     def visualize(self, U, discretization, title=None, legend=None, separate_colorbars=False,
-                  rescale_colorbars=False, block=None, filename=None, columns=2):
+                  rescale_colorbars=False, block=None, filename=None, columns=2, backend=None):
         """Visualize the provided data.
 
         Parameters
@@ -136,6 +136,7 @@ class PatchVisualizer(BasicInterface):
         assert isinstance(U, VectorArrayInterface) and hasattr(U, 'data') \
             or (isinstance(U, tuple) and all(isinstance(u, VectorArrayInterface) and hasattr(u, 'data') for u in U)
                 and all(len(u) == len(U[0]) for u in U))
+        assert backend is None or backend in ['matplotlib', 'gl']
         if filename:
             if not isinstance(U, tuple):
                 write_vtk(self.grid, U, filename, codim=self.codim)
@@ -149,6 +150,7 @@ class PatchVisualizer(BasicInterface):
                 visualize = visualize_patch_qt
             else:
                 visualize = visualize_patch_kivy
+            backend = backend if backend is not None else self.backend
             visualize(self.grid, U, bounding_box=self.bounding_box, codim=self.codim, title=title,
                             legend=legend, separate_colorbars=separate_colorbars, rescale_colorbars=rescale_colorbars,
-                            backend=self.backend, block=block, columns=columns)
+                            backend=backend, block=block, columns=columns)
