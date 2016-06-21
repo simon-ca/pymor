@@ -7,8 +7,6 @@ associated to grids. We use the `PySide <http://www.pyside.org>`_ bindings
 for the `Qt <http://www.qt-project.org>`_ widget toolkit for the GUI.
 """
 
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 
 try:

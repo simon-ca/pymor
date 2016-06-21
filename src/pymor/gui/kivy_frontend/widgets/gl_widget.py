@@ -1,5 +1,3 @@
-from __future__ import division, print_function
-
 from pymor.grids.referenceelements import triangle, square
 import time
 import math
@@ -341,7 +339,7 @@ if HAVE_ALL:
 
 
             def init_mesh(self):
-                x = np.array((0.0, 1.0))
+                x = np.array([0.0, 1.0])
                 y = np.linspace(0.0, 1.0, self.RESOLUTION)
                 vertices = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x)), np.repeat(y, len(x))])
 
