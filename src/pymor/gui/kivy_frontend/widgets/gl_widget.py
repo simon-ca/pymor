@@ -368,7 +368,7 @@ if HAVE_ALL:
                 inspector.create_inspector(Window, self)
 
             # todo optimization (prevent copying of vertices)
-            # to do so the vertices for each mesh must be contingeous in memory
+            # to do so the vertices for each mesh must be continuous in memory
             def update_meshes(self):
                 start = time.time()
                 num_meshes = len(self.meshes)
