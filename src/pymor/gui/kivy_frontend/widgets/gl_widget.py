@@ -431,21 +431,21 @@ if HAVE_ALL:
 
             def set_coordinates(self, coordinates):
                 if self.codim == 2:
-                    self.vertex_data[:, 0:2][:, 0:2] = coordinates
-                    self.vertex_data[:, 0:2][:, 0:2] += self.shift
-                    self.vertex_data[:, 0:2][:, 0:2] *= self.scale
+                    self.vertex_data[:, 0:2] = coordinates
+                    self.vertex_data[:, 0:2] += self.shift
+                    self.vertex_data[:, 0:2] *= self.scale
                 elif self.reference_element == triangle:
                     VERTEX_POS = coordinates[self.subentities]
                     VERTEX_POS += self.shift
                     VERTEX_POS *= self.scale
-                    self.vertex_data[:, 0:2][:, 0:2] = VERTEX_POS.reshape((-1, 2))
+                    self.vertex_data[:, 0:2] = VERTEX_POS.reshape((-1, 2))
                 else:
                     num_entities = len(self.subentities)
                     VERTEX_POS = coordinates[self.subentities]
                     VERTEX_POS += self.shift
                     VERTEX_POS *= self.scale
-                    self.vertex_data[:, 0:2][0:num_entities * 3, 0:2] = VERTEX_POS[:, 0:3, :].reshape((-1, 2))
-                    self.vertex_data[:, 0:2][num_entities * 3:, 0:2] = VERTEX_POS[:, [0, 2, 3], :].reshape((-1, 2))
+                    self.vertex_data[0:num_entities * 3, 0:2] = VERTEX_POS[:, 0:3, :].reshape((-1, 2))
+                    self.vertex_data[num_entities * 3:, 0:2] = VERTEX_POS[:, [0, 2, 3], :].reshape((-1, 2))
 
             def set(self, U, vmin=None, vmax=None):
                 self.vmin = self.vmin if vmin is None else vmin
