@@ -33,7 +33,6 @@ FS = """
 #endif
 
 varying vec4 frag_color;
-varying vec2 uv_vec;
 
 uniform sampler2D tex;
 
@@ -62,7 +61,7 @@ vec3 getAntiJetColor(float value) {
 
 void main (void){
     float value = frag_color.x;
-    gl_FragColor = vec4(getJetColor(value), 1.0);
+    gl_FragColor = vec4(getAntiJetColor(value), 1.0);
 }
 """
 
@@ -304,7 +303,192 @@ if HAVE_ALL:
                 self.fbo['scale'] = [float(v) for v in self.size]
 
 
-        return GLPatchWidgetFBO(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
+        class GLPatchWidgetFBOSpeed(Widget):
+
+            MAX_VERTICES = 2**16//3  # this bound is pessimistic as the mesh splitting algorithm is dumb.
+            FBO_SIZE = (100, 100)
+
+            def __init__(self, grid, vmin=None, vmax=None, bounding_box=([0, 0], [1, 1]), codim=2):
+                assert grid.reference_element in (triangle, square)
+                assert grid.dim == 2
+                assert codim in (0, 2)
+
+                super(GLPatchWidgetFBOSpeed, self).__init__()
+
+                self.grid = grid
+
+                subentities, coordinates, entity_map = flatten_grid(grid)
+
+                self.subentities = subentities
+                self.entity_map = entity_map
+                self.reference_element = grid.reference_element
+                self.vmin = vmin
+                self.vmax = vmax
+                self.bounding_box = bounding_box
+                self.codim = codim
+
+                bb = self.bounding_box
+                size_ = np.array([bb[1][0] - bb[0][0], bb[1][1] - bb[0][1]])
+
+                self.shift = bb[0]
+                self.scale = 1. / size_
+
+                print("SHIFT/SCALE", self.shift, self.scale)
+
+                # setup buffers
+                if self.reference_element == triangle:
+                    if codim == 2:
+                        self.vertex_data = np.empty((len(coordinates), 3))
+                        self.indices = np.asarray(subentities)
+                    else:
+                        self.vertex_data = np.empty((len(subentities)*3, 3))
+                        self.indices = np.arange(len(subentities) * 3, dtype=np.uint32)
+                else:
+                    if codim == 2:
+                        self.vertex_data = np.empty((len(coordinates), 3))
+                        self.indices = np.vstack((subentities[:, 0:3], subentities[:, [0, 2, 3]]))
+                    else:
+                        self.vertex_data = np.empty((len(subentities)*6, 3))
+                        self.indices = np.arange(len(subentities) * 6, dtype=np.uint32)
+
+                self.set_coordinates(coordinates)
+                self.meshes = None
+
+                with self.canvas:
+                    self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
+                    self.rect = Rectangle(texture=self.fbo.texture)
+
+                self.fbo.shader.vs = VS
+                self.fbo.shader.fs = FS
+
+                self.bind(pos=self.on_pos)
+                self.bind(size=self.on_size)
+
+                # this lets you inspect the user interface with the shortcut Ctrl+E
+                inspector.create_inspector(Window, self)
+
+            # todo optimization (prevent copying of vertices)
+            # to do so the vertices for each mesh must be contingeous in memory
+            def update_meshes(self):
+                start = time.time()
+                num_meshes = len(self.meshes)
+                max_vertices = self.MAX_VERTICES
+
+                if num_meshes == 1:
+                    self.meshes[0].vertices = self.vertex_data.reshape((-1))
+                else:
+                    for i in range(num_meshes-1):
+                        ind = self.indices[i*max_vertices:(i+1)*max_vertices].reshape((-1))
+                        self.meshes[i].vertices = self.vertex_data[ind].reshape((-1))
+
+                    i = num_meshes - 1
+                    ind = self.indices[i*max_vertices:].reshape((-1))
+                    self.meshes[-1].vertices = self.vertex_data[ind].reshape((-1))
+
+                stop = time.time()
+
+                print("Mesh update SPEED took {} seconds".format(stop-start))
+
+            def create_meshes(self):
+
+                print("create_meshes()")
+                start = time.time()
+                max_vertices = self.MAX_VERTICES
+
+                num_vertices = len(self.indices)
+                num_meshes = int(math.ceil(num_vertices/max_vertices))
+
+                print("num_meshes:", num_meshes)
+                print("num_vertices:", num_vertices)
+                print("max_vertices:", max_vertices)
+
+                vertex_format = [
+                    (b'v_pos', 2, 'float'),
+                    (b'v_color', 1, 'float'),
+                ]
+
+                if num_meshes == 1 or num_vertices < max_vertices:
+                    # if the number of vertices doesn't exceed max_vertices we can use one mesh
+                    ind = self.indices.flatten()
+                    self.meshes = [Mesh(vertices=self.vertex_data.flatten(), indices=ind, fmt=vertex_format, mode='triangles')]
+                else:
+                    self.meshes = []
+                    for i in range(num_meshes-1):
+                        ind = self.indices[i*max_vertices:(i+1)*max_vertices].flatten()
+                        self.meshes.append(Mesh(vertices=self.vertex_data[ind].flatten(), indices=np.arange(len(ind)),
+                                                fmt=vertex_format, mode='triangles'))
+                    i = num_meshes - 1
+                    ind = self.indices[i*max_vertices:].flatten()
+                    self.meshes.append(Mesh(vertices=self.vertex_data[ind].flatten(), indices=np.arange(len(ind)),
+                                            fmt=vertex_format, mode='triangles'))
+
+                for i, mesh in enumerate(self.meshes):
+                    self.fbo.add(mesh)
+
+                end = time.time()
+
+                print("Mesh splitting took {} seconds".format(end-start))
+
+            def set_coordinates(self, coordinates):
+                if self.codim == 2:
+                    self.vertex_data[:, 0:2][:, 0:2] = coordinates
+                    self.vertex_data[:, 0:2][:, 0:2] += self.shift
+                    self.vertex_data[:, 0:2][:, 0:2] *= self.scale
+                elif self.reference_element == triangle:
+                    VERTEX_POS = coordinates[self.subentities]
+                    VERTEX_POS += self.shift
+                    VERTEX_POS *= self.scale
+                    self.vertex_data[:, 0:2][:, 0:2] = VERTEX_POS.reshape((-1, 2))
+                else:
+                    num_entities = len(self.subentities)
+                    VERTEX_POS = coordinates[self.subentities]
+                    VERTEX_POS += self.shift
+                    VERTEX_POS *= self.scale
+                    self.vertex_data[:, 0:2][0:num_entities * 3, 0:2] = VERTEX_POS[:, 0:3, :].reshape((-1, 2))
+                    self.vertex_data[:, 0:2][num_entities * 3:, 0:2] = VERTEX_POS[:, [0, 2, 3], :].reshape((-1, 2))
+
+            def set(self, U, vmin=None, vmax=None):
+                self.vmin = self.vmin if vmin is None else vmin
+                self.vmax = self.vmax if vmax is None else vmax
+
+                U_buffer = self.vertex_data[:, 2]
+                if self.codim == 2:
+                    U_buffer[:] = U[self.entity_map]
+                elif self.reference_element == triangle:
+                    U_buffer[:] = np.repeat(U, 3)
+                else:
+                    U_buffer[:] = np.tile(np.repeat(U, 3), 2)
+
+                # normalize
+                vmin = np.min(U) if self.vmin is None else self.vmin
+                vmax = np.max(U) if self.vmax is None else self.vmax
+                U_buffer -= vmin
+                if (vmax - vmin) > 0:
+                    U_buffer /= float(vmax - vmin)
+
+                if self.meshes is None:
+                    self.create_meshes()
+                else:
+                    self.update_meshes()
+
+            def on_pos(self, instance, value):
+                self.rect.pos = value
+
+            def on_size(self, instance, value):
+                self.rect.texture = self.fbo.texture
+                self.rect.size = value
+
+                self.update_glsl()
+
+            def update_glsl(self, *args):
+                w, h = self.size
+                w = max(w, 1)
+                h = max(h, 1)
+                proj = Matrix().view_clip(0, w, 0, h, 1, 100, 0)
+                self.fbo['projection_mat'] = proj
+                self.fbo['scale'] = [float(v) for v in self.size]
+
+        return GLPatchWidgetFBOSpeed(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
                           codim=codim)
 
     def getColorBarWidget(padding, U=None, vmin=None, vmax=None):
@@ -318,7 +502,7 @@ if HAVE_ALL:
         class ColorBarFBO(Widget):
 
             RESOLUTION = 10
-            SIZE = (500, 500)
+            FBO_SIZE = (100, 100)
             BAR_WIDTH = 40
 
             def __init__(self):
@@ -326,7 +510,7 @@ if HAVE_ALL:
                 super(ColorBarFBO, self).__init__()
 
                 with self.canvas:
-                    self.fbo = Fbo(use_parent_modelview=True, size=(100, 100))
+                    self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
                     self.rect = Rectangle(texture=self.fbo.texture)
 
                 self.fbo.shader.vs = VS
@@ -417,8 +601,8 @@ if HAVE_ALL:
 
 
 else:
-    class GLPatchWidget(object):
-        pass
+    def getGLPatchWidget(parent, grid, bounding_box=None, vmin=None, vmax=None, codim=2, dpi=100):
+        return None
 
-    class ColorBarWidget(object):
-        pass
+    def getColorBarWidget(padding, U=None, vmin=None, vmax=None):
+        return None
