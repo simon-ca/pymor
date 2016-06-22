@@ -100,7 +100,7 @@ if HAVE_ALL:
 
         from pymor.grids.constructions import flatten_grid
 
-        class GLPatchWidgetFBOSpeed(Widget):
+        class GLPatchWidgetFBO(Widget):
 
             MAX_VERTICES = 2**16//3  # this bound is pessimistic as the mesh splitting algorithm is dumb.
             FBO_SIZE = (100, 100)
@@ -110,7 +110,7 @@ if HAVE_ALL:
                 assert grid.dim == 2
                 assert codim in (0, 2)
 
-                super(GLPatchWidgetFBOSpeed, self).__init__()
+                super(GLPatchWidgetFBO, self).__init__()
 
                 self.grid = grid
 
@@ -280,7 +280,7 @@ if HAVE_ALL:
                 self.fbo['projection_mat'] = proj
                 self.fbo['scale'] = [float(v) for v in self.size]
 
-        return GLPatchWidgetFBOSpeed(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
+        return GLPatchWidgetFBO(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
                           codim=codim)
 
     def getColorBarWidget(padding, U=None, vmin=None, vmax=None):
