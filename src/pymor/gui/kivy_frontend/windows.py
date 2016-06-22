@@ -140,6 +140,7 @@ if HAVE_KIVY:
 
             def start_timer(self):
                 speed = self.slider_speed.value/100
+                speed = 1E-10
                 Clock.schedule_interval(self.update_solution, speed)
 
             def stop_timer(self):
