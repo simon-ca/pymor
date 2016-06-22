@@ -196,16 +196,11 @@ if HAVE_ALL:
             # todo optimization
             def create_meshes(self):
 
-                print("create_meshes()")
                 start = time.time()
                 max_vertices = 2**16//3
 
                 num_vertices = len(self.indices)
                 num_meshes = int(math.ceil(num_vertices/max_vertices))
-
-                print("num_meshes:", num_meshes)
-                print("num_vertices:", num_vertices)
-                print("max_vertices:", max_vertices)
 
                 vertex_format = [
                     (b'v_pos', 2, 'float'),
@@ -235,8 +230,6 @@ if HAVE_ALL:
                 #self.canvas.clear()
 
                 for i, mesh in enumerate(self.meshes):
-                    print("Mesh ", i)
-                    #self.canvas.add(mesh)
                     self.fbo.add(mesh)
 
                 end = time.time()
@@ -391,16 +384,11 @@ if HAVE_ALL:
 
             def create_meshes(self):
 
-                print("create_meshes()")
                 start = time.time()
                 max_vertices = self.MAX_VERTICES
 
                 num_vertices = len(self.indices)
                 num_meshes = int(math.ceil(num_vertices/max_vertices))
-
-                print("num_meshes:", num_meshes)
-                print("num_vertices:", num_vertices)
-                print("max_vertices:", max_vertices)
 
                 vertex_format = [
                     (b'v_pos', 2, 'float'),
