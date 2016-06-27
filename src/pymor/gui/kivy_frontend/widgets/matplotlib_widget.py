@@ -22,6 +22,10 @@ from matplotlib.figure import Figure
 
 if HAVE_ALL:
 
+    # as soon as a FigureCanvas is imported a kivy window is instanciated by the matplotlib bindings.
+    # In order to be able to show multiple windows, this class has to be parsed in a new process.
+    # This is done by wrapping it
+
     def getMatplotlibOnedWidget(parent, grid, count, vmin=None, vmax=None, legend=None, codim=1,
                      separate_plots=False, dpi=100):
         from pymor.gui.kivy_matplotlib import FigureCanvasKivyAgg
