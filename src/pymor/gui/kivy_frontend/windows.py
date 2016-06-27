@@ -16,7 +16,7 @@ except ImportError:
 
 if HAVE_KIVY:
 
-    def getPlotMainWindow(U, plot, length, title, isLayout=False):
+    def getPlotMainWindow(U, plot, length, title, isNotMatplotlib=False):
 
         from kivy.app import App
         from kivy.core.window import Window
@@ -38,7 +38,7 @@ if HAVE_KIVY:
 
         class PlotMainWindow(App):
 
-            def __init__(self, U, plot, length=1, title=None, isLayout=False):
+            def __init__(self, U, plot, length=1, title=None, isNotMatplotlib=False):
                 super(PlotMainWindow, self).__init__()
 
                 self.title = "pyMor kivy"  # window title
@@ -47,7 +47,7 @@ if HAVE_KIVY:
 
                 self.U = U
                 # find a better way to do this
-                if isLayout:
+                if isNotMatplotlib:
                     # gl case
                     self.plot_layout = plot.build()
                 else:
@@ -56,7 +56,12 @@ if HAVE_KIVY:
                 self.plot = plot
                 self.length = length
                 self.plot.set(U, 0)
-                self.is_layout = isLayout
+                self.is_layout = isNotMatplotlib
+
+                # this only works if the SDL window provider is used
+                from kivy.base import EventLoop
+                EventLoop.window.minimum_width = 800
+                EventLoop.window.minimum_height = 600
 
             def build(self):
                 #set background color
@@ -260,7 +265,7 @@ if HAVE_KIVY:
                             write_vtk(self.grid, NumpyVectorArray(u, copy=False), '{}-{}'.format(base_name, i),
                                       codim=self.codim)
 
-        return PlotMainWindow(U=U, plot=plot, length=length, title=title, isLayout=isLayout)
+        return PlotMainWindow(U=U, plot=plot, length=length, title=title, isNotMatplotlib=isNotMatplotlib)
 
     def getPatchPlotMainWindow(U, grid, bounding_box, codim, title, legend, separate_colorbars, rescale_colorbars,
                                columns, widget, backend):
@@ -358,7 +363,7 @@ if HAVE_KIVY:
                     colorbar.set(vmin=vmin, vmax=vmax)
 
         widget = PlotWidget()
-        window = getPlotMainWindow(U, widget, length=length, title=title, isLayout=True)
+        window = getPlotMainWindow(U, widget, length=length, title=title, isNotMatplotlib=True)
         window.codim = codim
         window.grid = grid
         return window

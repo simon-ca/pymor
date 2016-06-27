@@ -25,7 +25,7 @@ def visualize_oned(grid, U, codim=1, title=None, legend=None, separate_plots=Fal
                                                                        vmax=[np.max(u) for u in U], legend=legend, codim=codim,
                                                                        separate_plots=separate_plots),
                                                length=len(U[0]),
-                                               title=title, isLayout=False), block)
+                                               title=title, isNotMatplotlib=False), block)
 
 
 @defaults('backend', sid_ignore=('backend',))
