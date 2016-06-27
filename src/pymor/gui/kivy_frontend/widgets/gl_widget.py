@@ -33,6 +33,7 @@ FS = """
 #endif
 
 varying vec4 frag_color;
+varying vec2 tex_coord0;
 
 uniform sampler2D tex;
 
@@ -61,7 +62,7 @@ vec3 getAntiJetColor(float value) {
 
 void main (void){
     float value = frag_color.x;
-    gl_FragColor = vec4(getAntiJetColor(value), 1.0);
+    gl_FragColor = vec4(getJetColor(value), 1.0);
 }
 """
 
@@ -95,14 +96,26 @@ if HAVE_ALL:
         from kivy.core.window import Window
         from kivy.uix.widget import Widget
         from kivy.graphics.transformation import Matrix
+        from kivy.resources import resource_find, resource_add_path, resource_paths
 
-        from kivy.graphics import Fbo, Rectangle
+        from kivy.graphics import Fbo, Rectangle, Callback
 
         from pymor.grids.constructions import flatten_grid
 
+        import OpenGL.GL as gl
+        import os, inspect
+        from ctypes import c_void_p
+
+        module_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        resource_add_path(module_path)
+        print(module_path)
+
         class GLPatchWidgetFBO(Widget):
 
-            MAX_VERTICES = 2**16//3  # this bound is pessimistic as the mesh splitting algorithm is dumb.
+            # bound for the number of vertices in one Mesh
+            # this is pessimistic as the mesh splitting algorithm is dumb.
+            MAX_VERTICES = 2**16//3
+            # size of the FBO, it's texture gets resized and mapped to a renctangle in the GUI
             FBO_SIZE = (100, 100)
 
             def __init__(self, grid, vmin=None, vmax=None, bounding_box=([0, 0], [1, 1]), codim=2):
@@ -130,8 +143,6 @@ if HAVE_ALL:
                 self.shift = bb[0]
                 self.scale = 1. / size_
 
-                print("SHIFT/SCALE", self.shift, self.scale)
-
                 # setup buffers
                 if self.reference_element == triangle:
                     if codim == 2:
@@ -152,11 +163,11 @@ if HAVE_ALL:
                 self.meshes = None
 
                 with self.canvas:
+                    #self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE, vs=VS, fs=FS)
                     self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
                     self.rect = Rectangle(texture=self.fbo.texture)
 
-                self.fbo.shader.vs = VS
-                self.fbo.shader.fs = FS
+                self.fbo.shader.source = resource_find("shit_shader.glsl")
 
                 self.bind(pos=self.on_pos)
                 self.bind(size=self.on_size)
@@ -171,20 +182,22 @@ if HAVE_ALL:
                 num_meshes = len(self.meshes)
                 max_vertices = self.MAX_VERTICES
 
-                if num_meshes == 1:
+                if False: #num_meshes == 1:
                     self.meshes[0].vertices = self.vertex_data.reshape((-1))
                 else:
                     for i in range(num_meshes-1):
-                        ind = self.indices[i*max_vertices:(i+1)*max_vertices].reshape((-1))
+                        #ind = self.indices[i*max_vertices:(i+1)*max_vertices].reshape((-1))
+                        ind = self.index_map[i]
                         self.meshes[i].vertices = self.vertex_data[ind].reshape((-1))
 
                     i = num_meshes - 1
-                    ind = self.indices[i*max_vertices:].reshape((-1))
+                    #ind = self.indices[i*max_vertices:].reshape((-1))
+                    ind = self.index_map[-1]
                     self.meshes[-1].vertices = self.vertex_data[ind].reshape((-1))
 
                 stop = time.time()
-
-                print("Mesh update SPEED took {} seconds".format(stop-start))
+                m_str = "mesh" if num_meshes == 1 else "meshes"
+                print("Update of {} {} took {} seconds".format(num_meshes, m_str, stop-start))
 
             def create_meshes(self):
 
@@ -194,23 +207,32 @@ if HAVE_ALL:
                 num_vertices = len(self.indices)
                 num_meshes = int(math.ceil(num_vertices/max_vertices))
 
+                print("num_meshes", num_meshes)
+                print("num_vertices", num_vertices)
+                print("max_vertices", max_vertices)
+
                 vertex_format = [
                     (b'v_pos', 2, 'float'),
                     (b'v_color', 1, 'float'),
                 ]
 
-                if num_meshes == 1 or num_vertices < max_vertices:
+                self.index_map = []
+
+                if False: #num_meshes == 1 or num_vertices < max_vertices*3:
                     # if the number of vertices doesn't exceed max_vertices we can use one mesh
                     ind = self.indices.flatten()
+                    self.index_map.append(ind)
                     self.meshes = [Mesh(vertices=self.vertex_data.flatten(), indices=ind, fmt=vertex_format, mode='triangles')]
                 else:
                     self.meshes = []
                     for i in range(num_meshes-1):
                         ind = self.indices[i*max_vertices:(i+1)*max_vertices].flatten()
+                        self.index_map.append(ind)
                         self.meshes.append(Mesh(vertices=self.vertex_data[ind].flatten(), indices=np.arange(len(ind)),
                                                 fmt=vertex_format, mode='triangles'))
                     i = num_meshes - 1
                     ind = self.indices[i*max_vertices:].flatten()
+                    self.index_map.append(ind)
                     self.meshes.append(Mesh(vertices=self.vertex_data[ind].flatten(), indices=np.arange(len(ind)),
                                             fmt=vertex_format, mode='triangles'))
 
@@ -270,6 +292,7 @@ if HAVE_ALL:
                 self.rect.texture = self.fbo.texture
                 self.rect.size = value
 
+                # the size of the
                 self.update_glsl()
 
             def update_glsl(self, *args):
@@ -279,6 +302,184 @@ if HAVE_ALL:
                 proj = Matrix().view_clip(0, w, 0, h, 1, 100, 0)
                 self.fbo['projection_mat'] = proj
                 self.fbo['scale'] = [float(v) for v in self.size]
+
+
+        class GLPatchWidgetClassic(Widget):
+
+            # size of the FBO, it's texture gets resized and mapped to a renctangle in the UI
+            FBO_SIZE = (1000, 1000)
+
+            def __init__(self, grid, vmin=None, vmax=None, bounding_box=([0, 0], [1, 1]), codim=2):
+                assert grid.reference_element in (triangle, square)
+                assert grid.dim == 2
+                assert codim in (0, 2)
+
+                super(GLPatchWidgetClassic, self).__init__()
+
+                self.grid = grid
+
+                subentities, coordinates, entity_map = flatten_grid(grid)
+
+                self.subentities = subentities
+                self.entity_map = entity_map
+                self.reference_element = grid.reference_element
+                self.vmin = vmin
+                self.vmax = vmax
+                self.bounding_box = bounding_box
+                self.codim = codim
+
+                bb = self.bounding_box
+                size_ = np.array([bb[1][0] - bb[0][0], bb[1][1] - bb[0][1]])
+
+                self.shift = bb[0]
+                self.scale = 1. / size_
+
+                # setup buffers
+                if self.reference_element == triangle:
+                    if codim == 2:
+                        self.vertex_data = np.empty(len(coordinates),
+                                                    dtype=[('position', 'f4', 2), ('color', 'f4', 1)])
+                        self.indices = subentities
+                    else:
+                        self.vertex_data = np.empty(len(subentities) * 3,
+                                                    dtype=[('position', 'f4', 2), ('color', 'f4', 1)])
+                        self.indices = np.arange(len(subentities) * 3, dtype=np.uint32)
+                else:
+                    if codim == 2:
+                        self.vertex_data = np.empty(len(coordinates),
+                                                    dtype=[('position', 'f4', 2), ('color', 'f4', 1)])
+                        self.indices = np.vstack((subentities[:, 0:3], subentities[:, [0, 2, 3]]))
+                    else:
+                        self.vertex_data = np.empty(len(subentities) * 6,
+                                                    dtype=[('position', 'f4', 2), ('color', 'f4', 1)])
+                        self.indices = np.arange(len(subentities) * 6, dtype=np.uint32)
+                self.indices = np.ascontiguousarray(self.indices)
+
+                self.vertex_data['color'] = 1
+
+                #self.set_coordinates(coordinates)
+
+                with self.canvas:
+                    #self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
+                    self.fbo = Fbo(use_parent_projection=True, use_parent_modelview=True, size=self.FBO_SIZE)
+                    self.rect = Rectangle(texture=self.fbo.texture)
+
+                self.initialize_gl()
+
+                with self.fbo:
+                    #Callback(self.initialize_gl)
+                    self.cb = Callback(self.run_gl)
+
+                self.set_coordinates(coordinates)
+
+                self.fbo.shader.source = resource_find("shit_shader.glsl")
+
+                self.bind(pos=self.on_pos)
+                self.bind(size=self.on_size)
+
+                # this lets you inspect the user interface with the shortcut Ctrl+E
+                inspector.create_inspector(Window, self)
+
+                self.init = False
+
+            def initialize_gl(self):
+                gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+
+                #self.shaders_program = link_shader_program(compile_vertex_shader(VS))
+
+                gl.glUseProgram(0)
+                #gl.glUseProgram(self.fbo.shader.vs)
+
+                self.vertices_id = gl.glGenBuffers(1)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
+                gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertex_data, gl.GL_DYNAMIC_DRAW)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+                self.indices_id = gl.glGenBuffers(1)
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices_id)
+                gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices, gl.GL_STATIC_DRAW)
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
+
+            def run_gl(self, instr):
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
+                gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertex_data, gl.GL_DYNAMIC_DRAW)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+                gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
+                gl.glPushClientAttrib(gl.GL_CLIENT_VERTEX_ARRAY_BIT)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices_id)
+
+                gl.glVertexPointer(3, gl.GL_FLOAT, 0, c_void_p(None))
+                gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+                gl.glDrawElements(gl.GL_TRIANGLES, self.indices.size, gl.GL_UNSIGNED_INT, None)
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+                gl.glPopClientAttrib()
+
+            def set_coordinates(self, coordinates):
+                if self.codim == 2:
+                    self.vertex_data['position'][:, 0:2] = coordinates
+                    self.vertex_data['position'][:, 0:2] += self.shift
+                    self.vertex_data['position'][:, 0:2] *= self.scale
+                elif self.reference_element == triangle:
+                    VERTEX_POS = coordinates[self.subentities]
+                    VERTEX_POS += self.shift
+                    VERTEX_POS *= self.scale
+                    self.vertex_data['position'][:, 0:2] = VERTEX_POS.reshape((-1, 2))
+                else:
+                    num_entities = len(self.subentities)
+                    VERTEX_POS = coordinates[self.subentities]
+                    VERTEX_POS += self.shift
+                    VERTEX_POS *= self.scale
+                    self.vertex_data['position'][0:num_entities * 3, 0:2] = VERTEX_POS[:, 0:3, :].reshape((-1, 2))
+                    self.vertex_data['position'][num_entities * 3:, 0:2] = VERTEX_POS[:, [0, 2, 3], :].reshape((-1, 2))
+
+            def set(self, U, vmin=None, vmax=None):
+                self.vmin = self.vmin if vmin is None else vmin
+                self.vmax = self.vmax if vmax is None else vmax
+
+                U_buffer = self.vertex_data['color']
+                if self.codim == 2:
+                    U_buffer[:] = U[self.entity_map]
+                elif self.reference_element == triangle:
+                    U_buffer[:] = np.repeat(U, 3)
+                else:
+                    U_buffer[:] = np.tile(np.repeat(U, 3), 2)
+
+                # normalize
+                vmin = np.min(U) if self.vmin is None else self.vmin
+                vmax = np.max(U) if self.vmax is None else self.vmax
+                U_buffer -= vmin
+                if (vmax - vmin) > 0:
+                    U_buffer /= float(vmax - vmin)
+
+                if not self.init:
+                    self.initialize_gl()
+                    self.init = True
+                self.run_gl(None)
+
+            def on_pos(self, instance, value):
+                self.rect.pos = value
+
+            def on_size(self, instance, value):
+                self.fbo.size = self.size
+                self.rect.texture = self.fbo.texture
+                self.rect.size = value
+
+                self.update_glsl()
+
+            def update_glsl(self, *args):
+                w, h = self.size
+                w = max(w, 1)
+                h = max(h, 1)
+                proj = Matrix().view_clip(0, w, 0, h, 1, 100, 0)
+                self.fbo['projection_mat'] = proj
+                self.fbo['scale'] = [float(v) for v in self.size]
+
+        #return GLPatchWidgetClassic(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
+        #                  codim=codim)
 
         return GLPatchWidgetFBO(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
                           codim=codim)
@@ -290,6 +491,12 @@ if HAVE_ALL:
         from kivy.graphics.vertex_instructions import Mesh
         from kivy.graphics.transformation import Matrix
         from kivy.graphics import Fbo, Rectangle
+        from kivy.resources import resource_find, resource_add_path
+        import os, inspect
+
+        module_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        resource_add_path(module_path)
+        print(module_path)
 
         class ColorBarFBO(Widget):
 
@@ -305,8 +512,10 @@ if HAVE_ALL:
                     self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
                     self.rect = Rectangle(texture=self.fbo.texture)
 
-                self.fbo.shader.vs = VS
-                self.fbo.shader.fs = FS
+                self.fbo.shader.source = resource_find("shit_shader.glsl")
+
+                #self.fbo.shader.vs = VS
+                #self.fbo.shader.fs = FS
 
                 self.bind(pos=self.on_pos)
                 self.bind(size=self.on_size)
@@ -350,6 +559,7 @@ if HAVE_ALL:
                 proj = Matrix().view_clip(0, w, 0, h, 1, 100, 0)
                 self.fbo['projection_mat'] = proj
                 self.fbo['scale'] = [float(v) for v in self.size]
+
 
 
         class ColorBarWidget(BoxLayout):
