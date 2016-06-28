@@ -11,14 +11,16 @@ uniform mat4 projection_mat;
 uniform vec2 shift;
 uniform vec2 scale;
 
-varying vec4 frag_color;
+//varying vec4 frag_color;
+varying float frag_color;
 //varying vec2 tex_coord0;
 
 void main (void) {
     vec2 pos_moved = v_pos * scale + shift;
     vec4 pos = modelview_mat * vec4(pos_moved,1.0,1.0);
     gl_Position = projection_mat * pos;
-    frag_color = vec4(v_color, 0.0, 0.0, 0.0);
+    //frag_color = vec4(v_color, 0.0, 0.0, 0.0);
+    frag_color = v_color;
     //tex_coord0 = vec2(0.0, 0.0);
 }
 
@@ -27,7 +29,8 @@ void main (void) {
     precision highp float;
 #endif
 
-varying vec4 frag_color;
+//varying vec4 frag_color;
+varying float frag_color;
 //varying vec2 tex_coord0;
 
 uniform sampler2D tex;
@@ -56,6 +59,7 @@ vec3 getAntiJetColor(float value) {
     }
 
 void main (void){
-    float value = frag_color.x;
+    //float value = frag_color.x;
+    float value = frag_color;
     gl_FragColor = vec4(getJetColor(value), 1.0);
 }
