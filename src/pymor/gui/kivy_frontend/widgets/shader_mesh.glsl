@@ -8,7 +8,7 @@ attribute float  v_color;
 
 uniform mat4 modelview_mat;
 uniform mat4 projection_mat;
-uniform vec2 shift;
+uniform vec2 shift; // this could be removed because we render into a fbo texture
 uniform vec2 scale;
 
 //varying vec4 frag_color;
