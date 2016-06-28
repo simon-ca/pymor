@@ -167,7 +167,7 @@ if HAVE_ALL:
                     self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
                     self.rect = Rectangle(texture=self.fbo.texture)
 
-                self.fbo.shader.source = resource_find("shit_shader.glsl")
+                self.fbo.shader.source = resource_find("shader_mesh.glsl")
 
                 self.bind(pos=self.on_pos)
                 self.bind(size=self.on_size)
@@ -372,7 +372,7 @@ if HAVE_ALL:
 
                 self.set_coordinates(coordinates)
 
-                self.fbo.shader.source = resource_find("shit_shader.glsl")
+                self.fbo.shader.source = resource_find("shader_mesh.glsl")
 
                 self.bind(pos=self.on_pos)
                 self.bind(size=self.on_size)
@@ -512,7 +512,7 @@ if HAVE_ALL:
                     self.fbo = Fbo(use_parent_modelview=True, size=self.FBO_SIZE)
                     self.rect = Rectangle(texture=self.fbo.texture)
 
-                self.fbo.shader.source = resource_find("shit_shader.glsl")
+                self.fbo.shader.source = resource_find("shader_mesh.glsl")
 
                 #self.fbo.shader.vs = VS
                 #self.fbo.shader.fs = FS
