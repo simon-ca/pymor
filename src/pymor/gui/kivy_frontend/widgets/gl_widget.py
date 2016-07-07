@@ -364,7 +364,7 @@ if HAVE_ALL:
                     self.fbo = Fbo(use_parent_projection=True, use_parent_modelview=True, size=self.FBO_SIZE)
                     self.rect = Rectangle(texture=self.fbo.texture)
 
-                self.initialize_gl()
+                # self.initialize_gl()
 
                 with self.fbo:
                     #Callback(self.initialize_gl)
@@ -372,7 +372,7 @@ if HAVE_ALL:
 
                 self.set_coordinates(coordinates)
 
-                self.fbo.shader.source = resource_find("shader_mesh.glsl")
+                self.fbo.shader.source = resource_find("shader_classic.glsl")
 
                 self.bind(pos=self.on_pos)
                 self.bind(size=self.on_size)
@@ -380,27 +380,9 @@ if HAVE_ALL:
                 # this lets you inspect the user interface with the shortcut Ctrl+E
                 inspector.create_inspector(Window, self)
 
-                self.init = False
+                self.initialized = False
 
-            def initialize_gl(self):
-                gl.glClearColor(1.0, 1.0, 1.0, 1.0)
-
-                #self.shaders_program = link_shader_program(compile_vertex_shader(VS))
-
-                gl.glUseProgram(0)
-                #gl.glUseProgram(self.fbo.shader.vs)
-
-                self.vertices_id = gl.glGenBuffers(1)
-                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
-                gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertex_data, gl.GL_DYNAMIC_DRAW)
-                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-                self.indices_id = gl.glGenBuffers(1)
-                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices_id)
-                gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices, gl.GL_STATIC_DRAW)
-                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
-
-            def run_gl(self, instr):
+            def run_gl_old(self, instr):
                 gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
                 gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertex_data, gl.GL_DYNAMIC_DRAW)
                 gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
@@ -417,6 +399,49 @@ if HAVE_ALL:
                 gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
                 gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
                 gl.glPopClientAttrib()
+
+            def run_gl(self, instr):
+                # gl.glViewport(0, 0, 800, 600)
+                # gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+                #gl.glUseProgram(0)
+
+                if not self.initialized:
+                    # set vertices
+                    self.vertices_id = gl.glGenBuffers(1)
+                    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
+                    gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertex_data, gl.GL_DYNAMIC_DRAW)
+                    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+                    # set indices
+                    self.indices_id = gl.glGenBuffers(1)
+                    gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices_id)
+                    gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices, gl.GL_STATIC_DRAW)
+                    gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
+
+                    self.initialized = True
+
+                if self.need_update:
+                    print("UPDATE VERTICES")
+                    # set vertices
+                    self.vertices_id = gl.glGenBuffers(1)
+                    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
+                    gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertex_data, gl.GL_DYNAMIC_DRAW)
+                    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+                    self.need_update = False
+
+                gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vertices_id)
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices_id)
+
+                gl.glVertexPointer(3, gl.GL_FLOAT, 0, c_void_p(None))
+
+                gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+                gl.glDrawElements(gl.GL_TRIANGLES, self.indices.size, gl.GL_UNSIGNED_INT, c_void_p(None))
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
 
             def set_coordinates(self, coordinates):
                 if self.codim == 2:
@@ -436,7 +461,14 @@ if HAVE_ALL:
                     self.vertex_data['position'][0:num_entities * 3, 0:2] = VERTEX_POS[:, 0:3, :].reshape((-1, 2))
                     self.vertex_data['position'][num_entities * 3:, 0:2] = VERTEX_POS[:, [0, 2, 3], :].reshape((-1, 2))
 
+                min_x = self.vertex_data['position'][:,0].min()
+                max_x = self.vertex_data['position'][:,0].max()
+                min_y = self.vertex_data['position'][:,1].min()
+                max_y = self.vertex_data['position'][:,1].max()
+                print("BB", min_x, max_x, min_y, max_y)
+
             def set(self, U, vmin=None, vmax=None):
+                print("SET")
                 self.vmin = self.vmin if vmin is None else vmin
                 self.vmax = self.vmax if vmax is None else vmax
 
@@ -455,9 +487,7 @@ if HAVE_ALL:
                 if (vmax - vmin) > 0:
                     U_buffer /= float(vmax - vmin)
 
-                if not self.init:
-                    self.initialize_gl()
-                    self.init = True
+                self.need_update = True
                 self.run_gl(None)
 
             def on_pos(self, instance, value):
@@ -477,6 +507,7 @@ if HAVE_ALL:
                 proj = Matrix().view_clip(0, w, 0, h, 1, 100, 0)
                 self.fbo['projection_mat'] = proj
                 self.fbo['scale'] = [float(v) for v in self.size]
+                self.fbo['shift'] = [-1.0, -1.0]
 
         #return GLPatchWidgetClassic(grid=grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box,
         #                  codim=codim)
